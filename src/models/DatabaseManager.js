@@ -7,6 +7,7 @@ function getChannelSettings(channelId) {
     return new Promise(function(resolve, reject) {
         const query = 'SELECT * FROM channels WHERE ChannelId = ?';
         db.get(query, [channelId], function(err, row) {
+            db.close(); // 確保關閉連接
             if (err) {
                 reject(err);
             } else {

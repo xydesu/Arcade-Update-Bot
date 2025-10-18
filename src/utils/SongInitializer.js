@@ -5,7 +5,6 @@ async function initsongs() {
     const path = './json/mai';
     const url = 'https://otoge-db.net/maimai/data/music-ex.json';
     try {
-        console.log('[DEBUG] Starting initsongs function');
         if (!fs.existsSync(path)) {
             fs.mkdirSync(path, { recursive: true });
             console.log('[INFO] Created directory:', path);
@@ -37,7 +36,6 @@ async function initsongs() {
         artist: song.artist,
         bpm: song.bpm
     }));
-    //console.log('[DEBUG] maimaiSongs sample:', maimaiSongs.slice(0, 3));
     const maimaiSongsPath = `${path}/maimaiSongs.json`;
     fs.writeFileSync(maimaiSongsPath, JSON.stringify(maimaiSongs, null, 2));
     console.log('[INFO] Filtered maimai songs written to maimaiSongs.json successfully');

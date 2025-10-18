@@ -1,7 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('database.db');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -34,7 +33,6 @@ module.exports = {
 
         collector.on('collect', async i => {
             const selectedGames = i.values;
-
             const channelId = interaction.channelId;
             const maimai = selectedGames.includes('maimai');
             const maimaiintl = selectedGames.includes('maimaiintl');
@@ -42,24 +40,40 @@ module.exports = {
             const chunithmintl = selectedGames.includes('chunithmintl');
             const ongeki = selectedGames.includes('ongeki');
 
-            const insertQuery = `
-            INSERT INTO channels (ChannelId, Maimai, Maimaiintl, Chunithm, Chunithmintl, ongeki) 
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(ChannelId) DO UPDATE SET
-              Maimai=excluded.Maimai,
-              Maimaiintl=excluded.Maimaiintl,
-              Chunithm=excluded.Chunithm,
-              Chunithmintl=excluded.Chunithmintl,
-              ongeki=excluded.ongeki;
-            `;
+            // 使用 Promise 包裝數據庫操作以確保連接正確關閉
+            const executeDbOperation = () => {
+                return new Promise((resolve, reject) => {
+                    const db = new sqlite3.Database('database.db');
+                    const insertQuery = `
+                    INSERT INTO channels (ChannelId, Maimai, Maimaiintl, Chunithm, Chunithmintl, ongeki) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(ChannelId) DO UPDATE SET
+                      Maimai=excluded.Maimai,
+                      Maimaiintl=excluded.Maimaiintl,
+                      Chunithm=excluded.Chunithm,
+                      Chunithmintl=excluded.Chunithmintl,
+                      ongeki=excluded.ongeki;
+                    `;
 
-            db.run(insertQuery, [channelId, maimai, maimaiintl, chunithm, chunithmintl, ongeki], function (err) {
-                if (err) {
-                    console.error(err.message);
-                    return i.reply({ content: 'There was an error while adding the channel.', ephemeral: true });
-                }
+                    db.run(insertQuery, [channelId, maimai, maimaiintl, chunithm, chunithmintl, ongeki], function (err) {
+                        db.close(); // 確保關閉連接
+                        if (err) {
+                            console.error(err.message);
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+            };
+
+            try {
+                await executeDbOperation();
                 return i.reply({ content: 'Channel added successfully!', ephemeral: true });
-            });
+            } catch (error) {
+                console.error('Database error:', error);
+                return i.reply({ content: 'There was an error while adding the channel.', ephemeral: true });
+            }
         });
 
         collector.on('end', collected => {

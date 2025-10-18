@@ -1,18 +1,40 @@
-#file
+# 配置檔案
 config.json
 .env
-node_modules
-database.db
-package-lock.json
-error.log
 
-#folder
-mai/
-maiintl/
-ongeki/
-chu/
-chuintl/
+# 數據庫和日誌
+database.db
+error.log
+*.log
+
+# 依賴項
 node_modules/
+package-lock.json
+
+# 執行時生成的檔案和資料夾
 images/
 json/
 docs/
+
+# 遊戲模組生成的特定檔案
+**/new.json
+**/old.json
+**/newObjects.json
+**/songlist.json
+**/maimaiSongs.json
+
+# 臨時檔案
+*.tmp
+*.temp
+*.bak
+*.old
+
+# IDE 檔案
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 作業系統檔案
+.DS_Store
+Thumbs.db

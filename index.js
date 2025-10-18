@@ -6,18 +6,24 @@ const sqlite3 = require('sqlite3').verbose();
 const schedule  = require('node-schedule')
 
 
-const { maimai } = require('./games/maimai.js');
-const { maiintl } = require('./games/maiintl.js');
-const { chunithm } = require('./games/chunithm.js');
-const { chuintl } = require('./games/chuintl.js');
-const { ongeki } = require('./games/ongeki.js');
-const { checkchannels } = require('./functions/checkchannels.js');
-const { initsongs } = require('./functions/initsongs.js');
-const { richpresence } = require('./functions/richpresence.js');
+const { maimai } = require('./src/games/MaimaiGame.js');
+const { maiintl } = require('./src/games/MaimaiInternationalGame.js');
+const { chunithm } = require('./src/games/ChunithmGame.js');
+const { chuintl } = require('./src/games/ChunithmInternationalGame.js');
+const { ongeki } = require('./src/games/OngekiGame.js');
+const { checkchannels } = require('./src/utils/ChannelValidator.js');
+const { initsongs } = require('./src/utils/SongInitializer.js');
+const { richpresence } = require('./src/services/PresenceService.js');
 
 dotenv.config();
 
 const token = process.env.BOTTOKEN;
+
+// 檢查必要的環境變量
+if (!token) {
+	console.error('BOTTOKEN environment variable is not set!');
+	process.exit(1);
+}
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -39,8 +45,19 @@ for (const folder of commandFolders) {
 	}
 }
 
-client.once(Events.ClientReady, readyClient => {
+client.once(Events.ClientReady, async readyClient => {
 	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+	
+	// 初始化數據庫
+	try {
+		await initializeDatabase();
+		console.log('Database initialized successfully.');
+	} catch (error) {
+		console.error('Failed to initialize database:', error);
+		process.exit(1);
+	}
+	
+	// 啟動主要功能
 	main();
 });
 
@@ -82,60 +99,80 @@ client.on(Events.InteractionCreate, async interaction => {
 
 client.login(token);
 
-// Connect to SQLite database (it will create the database file if it doesn't exist)
-const db = new sqlite3.Database('database.db', (err) => {
-	if (err) {
-		return console.error(err.message);
-	}
-	console.log('Connected to the SQLite database.');
-});
+// 將數據庫初始化移到一個單獨的函數中
+async function initializeDatabase() {
+	return new Promise((resolve, reject) => {
+		// Connect to SQLite database (it will create the database file if it doesn't exist)
+		const db = new sqlite3.Database('database.db', (err) => {
+			if (err) {
+				console.error(err.message);
+				reject(err);
+				return;
+			}
+			console.log('Connected to the SQLite database.');
+			
+			// Create table if it does not exist
+			const createTableQuery = `
+			  CREATE TABLE IF NOT EXISTS channels (
+				ChannelId TEXT PRIMARY KEY,
+				Maimai BOOLEAN NOT NULL CHECK (Maimai IN (0, 1)),
+				Maimaiintl BOOLEAN NOT NULL CHECK (Maimaiintl IN (0, 1)),
+				Chunithm BOOLEAN NOT NULL CHECK (Chunithm IN (0, 1)),
+				Chunithmintl BOOLEAN NOT NULL CHECK (Chunithmintl IN (0, 1)),
+				ongeki BOOLEAN NOT NULL CHECK (ongeki IN (0, 1))
+			  );
+			  `;
 
-// Create table if it does not exist
-const createTableQuery = `
-  CREATE TABLE IF NOT EXISTS channels (
-	ChannelId TEXT PRIMARY KEY,
-	Maimai BOOLEAN NOT NULL CHECK (Maimai IN (0, 1)),
-	Maimaiintl BOOLEAN NOT NULL CHECK (Maimaiintl IN (0, 1)),
-	Chunithm BOOLEAN NOT NULL CHECK (Chunithm IN (0, 1)),
-	Chunithmintl BOOLEAN NOT NULL CHECK (Chunithmintl IN (0, 1)),
-	ongeki BOOLEAN NOT NULL CHECK (ongeki IN (0, 1))
-  );
-  `;
-
-db.run(createTableQuery, (err) => {
-	if (err) {
-		return console.error(err.message);
-	}
-	console.log('Table created or already exists.');
-});
-
-// Close the database connection
-db.close((err) => {
-	if (err) {
-		return console.error(err.message);
-	}
-	console.log('Closed the database connection.');
-});
+			db.run(createTableQuery, (err) => {
+				if (err) {
+					console.error(err.message);
+					reject(err);
+					return;
+				}
+				console.log('Table created or already exists.');
+				
+				// Close the database connection
+				db.close((err) => {
+					if (err) {
+						console.error(err.message);
+						reject(err);
+						return;
+					}
+					console.log('Closed the database connection.');
+					resolve();
+				});
+			});
+		});
+	});
+}
 
 
 
 // Main function
 async function main() {
-	await initsongs();
-	//await download();
-	await checkchannels(client);
-	await maimai(client);
-	await chunithm(client);
-	await chuintl(client);
-	await maiintl(client);
-	await ongeki(client);
-	console.log('Current Time:' + new Date);
-	console.log('Next Scheduled Time:' + sche.nextInvocation());
+	try {
+		await initsongs();
+		await checkchannels(client);
+		await maimai(client);
+		await chunithm(client);
+		await chuintl(client);
+		await maiintl(client);
+		await ongeki(client);
+		console.log('Current Time:' + new Date().toISOString());
+		console.log('Next Scheduled Time:' + sche.nextInvocation());
+	} catch (error) {
+		console.error('Error in main function:', error);
+		// 將錯誤記錄到日誌文件
+		const fs = require('fs');
+		fs.appendFileSync('error.log', `[${new Date().toISOString()}] Main function error: ${error.message}\n${error.stack}\n`);
+	}
 }
 
-var taskFreq = '*/30 * * * *'
+// 配置常量
+const TASK_FREQUENCY = '*/30 * * * *'; // 每30分鐘執行一次
 
-var sche = schedule.scheduleJob(taskFreq, () => {
+var sche = schedule.scheduleJob(TASK_FREQUENCY, () => {
+	console.log('Scheduled task starting...');
 	main();
 });
 
