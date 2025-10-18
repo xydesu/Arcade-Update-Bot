@@ -136,15 +136,37 @@ async function updatePresence(client, title, artist, elapsed, totalSeconds, vide
         const currentSec = elapsed % 60;
         const currentTime = `${currentMin.toString().padStart(2, '0')}:${currentSec.toString().padStart(2, '0')}`;
         
-        // 生成進度條
+        // 生成動態進度條
         let bar = '';
         if (totalSeconds > 0) {
-            const pos = Math.floor((elapsed / totalSeconds) * PRESENCE_CONFIG.BAR_LENGTH);
+            const progress = elapsed / totalSeconds;
+            const pos = Math.floor(progress * PRESENCE_CONFIG.BAR_LENGTH);
+            
+            // 添加動畫效果 - 讓進度條有移動感
+            const animationOffset = Math.floor((elapsed % 4) / 2); // 每2秒切換一次
+            
             for (let i = 0; i < PRESENCE_CONFIG.BAR_LENGTH; i++) {
-                bar += i === pos ? '◉' : '━';
+                if (i < pos) {
+                    bar += '█'; // 已完成部分
+                } else if (i === pos) {
+                    // 當前播放位置，添加動畫效果
+                    bar += animationOffset === 0 ? '◉' : '●';
+                } else {
+                    bar += '░'; // 未完成部分
+                }
             }
         } else {
-            bar = '━'.repeat(PRESENCE_CONFIG.BAR_LENGTH);
+            // 無時間資訊時顯示滾動動畫
+            const scrollPos = elapsed % PRESENCE_CONFIG.BAR_LENGTH;
+            for (let i = 0; i < PRESENCE_CONFIG.BAR_LENGTH; i++) {
+                if (i === scrollPos) {
+                    bar += '◉';
+                } else if (Math.abs(i - scrollPos) <= 1) {
+                    bar += '●';
+                } else {
+                    bar += '░';
+                }
+            }
         }
         
         let detailsStr = `${currentTime} ${bar} ${videoLength || '??:??'}`;
