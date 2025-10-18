@@ -13,7 +13,7 @@ module.exports = {
             .addFields(
                 {
                     name: '📋 基本指令',
-                    value: `\`/addchannel\` - 為頻道添加遊戲通知\n\`/delchannel\` - 移除頻道的遊戲通知\n\`/status\` - 查看頻道通知狀態\n\`/help\` - 顯示此說明`,
+                    value: `\`/addchannel\` - 為頻道添加遊戲通知\n\`/delchannel\` - 移除頻道的遊戲通知\n\`/status\` - 查看頻道通知狀態\n\`/lastupdates\` - 查看遊戲最後更新記錄\n\`/help\` - 顯示此說明`,
                     inline: false
                 },
                 {
@@ -32,7 +32,11 @@ module.exports = {
                     inline: false
                 }
             )
-            .setTimestamp();
+            .setTimestamp()
+            .setFooter({
+                text: 'Arcade Update Bot v2.0',
+                iconURL: interaction.client.user.displayAvatarURL()
+            });
 
         await interaction.reply({ embeds: [embed] });
     },

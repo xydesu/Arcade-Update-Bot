@@ -91,33 +91,153 @@ class GameEngine {
         return item.thumbnail;
     }
 
+    // 自定義字段顯示，子類可以覆蓋此方法
+    getCustomFields(item) {
+        const fields = [];
+        
+        // 通用字段處理
+        if (item.artist) {
+            fields.push({
+                name: "🎤 藝術家",
+                value: item.artist,
+                inline: true
+            });
+        }
+
+        if (item.level || item.difficulty) {
+            fields.push({
+                name: "⭐ 難度",
+                value: item.level || item.difficulty,
+                inline: true
+            });
+        }
+
+        if (item.bpm) {
+            fields.push({
+                name: "🎵 BPM",
+                value: item.bpm.toString(),
+                inline: true
+            });
+        }
+
+        // 發佈日期
+        if (item.releaseDate || item.date) {
+            fields.push({
+                name: "📅 發佈日期",
+                value: item.releaseDate || item.date,
+                inline: true
+            });
+        }
+
+        // 版本資訊
+        if (item.version) {
+            fields.push({
+                name: "🔢 版本",
+                value: item.version,
+                inline: true
+            });
+        }
+
+        return fields;
+    }
+
+    // 記錄最後更新資訊
+    recordLastUpdate(item) {
+        const lastUpdatePath = './json/lastUpdates.json';
+        let lastUpdates = {};
+        
+        // 讀取現有的最後更新記錄
+        if (fs.existsSync(lastUpdatePath)) {
+            try {
+                lastUpdates = JSON.parse(fs.readFileSync(lastUpdatePath, 'utf8'));
+            } catch (error) {
+                console.warn('[WARN] Failed to read lastUpdates.json:', error.message);
+            }
+        }
+        
+        // 更新記錄
+        lastUpdates[this.gameKey] = {
+            gameName: this.gameName,
+            gameNameJP: this.gameNameJP,
+            lastItem: {
+                title: item.title,
+                artist: item.artist || null,
+                thumbnail: this.getImageUrl(item)
+            },
+            lastUpdateTime: new Date().toISOString(),
+            color: this.color,
+            avatarUrl: this.avatarUrl
+        };
+        
+        // 儲存更新記錄
+        try {
+            fs.writeFileSync(lastUpdatePath, JSON.stringify(lastUpdates, null, 2));
+        } catch (error) {
+            console.error('[ERROR] Failed to write lastUpdates.json:', error.message);
+        }
+    }
+
+    // 獲取所有遊戲的最後更新資訊
+    static getLastUpdates() {
+        const lastUpdatePath = './json/lastUpdates.json';
+        if (!fs.existsSync(lastUpdatePath)) {
+            return {};
+        }
+        
+        try {
+            return JSON.parse(fs.readFileSync(lastUpdatePath, 'utf8'));
+        } catch (error) {
+            console.error('[ERROR] Failed to read lastUpdates.json:', error.message);
+            return {};
+        }
+    }
+
     async postImageToDiscord(imageUrl, item, channelId, client) {
         try {
             console.log(`[INFO] Posting ${this.gameName} message to channel ${channelId}`);
             
+            // 記錄最後更新資訊
+            this.recordLastUpdate(item);
+            
+            // 創建更美觀的嵌入消息
+            const embed = {
+                title: `🎵 ${item.title}`,
+                color: this.color,
+                image: { url: imageUrl },
+                author: { 
+                    name: `${this.gameNameJP} 新增內容`, 
+                    icon_url: this.avatarUrl 
+                },
+                fields: this.getCustomFields(item), // 使用自定義字段方法
+                footer: { 
+                    text: `🕐 ${moment().format('YYYY-MM-DD HH:mm')}`,
+                    icon_url: this.thumbnailUrl
+                },
+                timestamp: new Date().toISOString()
+            };
+
+            // 添加描述或永久連結
+            if (this.hasPermalink && item.permalink) {
+                embed.description = `🔗 [查看詳細資訊](${item.permalink})`;
+            }
+
             const embedMessage = {
-                embeds: [
-                    {
-                        title: item.title,
-                        ...(this.hasPermalink && item.permalink && { description: item.permalink }),
-                        color: this.color,
-                        image: { url: imageUrl },
-                        author: { name: this.gameNameJP, icon_url: this.avatarUrl },
-                        footer: { text: `Generated at ${moment().format('YYYY-MM-DD')}` },
-                        thumbnail: { url: this.thumbnailUrl },
-                    },
-                ],
+                embeds: [embed],
                 username: this.gameNameJP,
                 avatar_url: this.avatarUrl,
             };
 
-            // 添加按鈕（如果有永久連結）
+            // 添加美化的按鈕組
             if (this.hasPermalink && item.permalink) {
-                const button = new ButtonBuilder()
-                    .setLabel('閱讀更多')
+                const linkButton = new ButtonBuilder()
+                    .setLabel('📖 詳細資訊')
                     .setURL(item.permalink)
                     .setStyle(ButtonStyle.Link);
-                embedMessage.components = [{ type: 1, components: [button] }];
+
+                embedMessage.components = [{ 
+                    type: 1, 
+                    components: [linkButton] 
+                }];
             }
 
             const channel = client.channels.cache.get(channelId);

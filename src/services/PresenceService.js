@@ -5,7 +5,7 @@ const ytdl = require('ytdl-core');
 // 配置常量
 const PRESENCE_CONFIG = {
     SONGS_PATH: './json/mai/maimaiSongs.json',
-    BAR_LENGTH: 26,
+    BAR_LENGTH: 16,  // 適合音樂播放器的進度條長度
     MAX_DETAILS_LENGTH: 128,
     MAX_STATE_LENGTH: 64,
     UPDATE_INTERVAL: 1000, // 1秒
@@ -136,61 +136,64 @@ async function updatePresence(client, title, artist, elapsed, totalSeconds, vide
         const currentSec = elapsed % 60;
         const currentTime = `${currentMin.toString().padStart(2, '0')}:${currentSec.toString().padStart(2, '0')}`;
         
-        // 生成動態進度條
-        let bar = '';
+        // 生成音樂播放器樣式的進度條
+        let progressBar = '';
+        let timeDisplay = '';
+        
         if (totalSeconds > 0) {
             const progress = elapsed / totalSeconds;
             const pos = Math.floor(progress * PRESENCE_CONFIG.BAR_LENGTH);
             
-            // 添加動畫效果 - 讓進度條有移動感
-            const animationOffset = Math.floor((elapsed % 4) / 2); // 每2秒切換一次
-            
+            // 創建更像音樂播放器的進度條
             for (let i = 0; i < PRESENCE_CONFIG.BAR_LENGTH; i++) {
                 if (i < pos) {
-                    bar += '█'; // 已完成部分
+                    progressBar += '━'; // 已播放部分
                 } else if (i === pos) {
-                    // 當前播放位置，添加動畫效果
-                    bar += animationOffset === 0 ? '◉' : '●';
+                    progressBar += '●'; // 播放位置指示器
                 } else {
-                    bar += '░'; // 未完成部分
+                    progressBar += '─'; // 未播放部分
                 }
             }
+            
+            // 音樂播放器樣式：時間 ━━━●─── 總時長
+            timeDisplay = `${currentTime} ${progressBar} ${videoLength}`;
         } else {
-            // 無時間資訊時顯示滾動動畫
+            // 無時間資訊時的動畫效果
             const scrollPos = elapsed % PRESENCE_CONFIG.BAR_LENGTH;
             for (let i = 0; i < PRESENCE_CONFIG.BAR_LENGTH; i++) {
                 if (i === scrollPos) {
-                    bar += '◉';
+                    progressBar += '♪';
                 } else if (Math.abs(i - scrollPos) <= 1) {
-                    bar += '●';
+                    progressBar += '♫';
                 } else {
-                    bar += '░';
+                    progressBar += '─';
                 }
             }
+            timeDisplay = `♪ ${progressBar} ♫`;
         }
         
-        let detailsStr = `${currentTime} ${bar} ${videoLength || '??:??'}`;
-        if (detailsStr.length > PRESENCE_CONFIG.MAX_DETAILS_LENGTH) {
-            detailsStr = detailsStr.slice(0, PRESENCE_CONFIG.MAX_DETAILS_LENGTH);
-        }
-        
-        // 居中對齊
-        let stateStr = detailsStr;
-        if (stateStr.length < PRESENCE_CONFIG.MAX_STATE_LENGTH) {
-            const totalPad = PRESENCE_CONFIG.MAX_STATE_LENGTH - stateStr.length;
-            const leftPad = Math.floor(totalPad / 2);
-            const rightPad = totalPad - leftPad;
-            stateStr = ' '.repeat(leftPad) + stateStr + ' '.repeat(rightPad);
-        }
-        
-        await client.user.setPresence({
+        // 使用音樂播放器的標準配置
+        const presenceData = {
             activities: [{
-                name: `🎵 ${title} — ${artist}`,
-                type: 2, // LISTENING
-                state: stateStr,
+                name: `${title} — ${artist}`,  // 歌曲標題和藝術家在同一行
+                type: 2, // LISTENING 類型
+                state: timeDisplay, // 播放進度
             }],
             status: 'online',
-        });
+        };
+        
+        // 如果有總時長，添加時間戳
+        if (totalSeconds > 0) {
+            const startTime = Date.now() - (elapsed * 1000);
+            const endTime = startTime + (totalSeconds * 1000);
+            
+            presenceData.activities[0].timestamps = {
+                start: startTime,
+                end: endTime
+            };
+        }
+        
+        await client.user.setPresence(presenceData);
         
     } catch (error) {
         console.error('[ERROR] Failed to update presence:', error);
