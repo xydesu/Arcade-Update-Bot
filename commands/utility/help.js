@@ -32,11 +32,7 @@ module.exports = {
                     inline: false
                 }
             )
-            .setTimestamp()
-            .setFooter({ 
-                text: 'Made with ❤️ by XingYanTW', 
-                iconURL: interaction.client.user.displayAvatarURL() 
-            });
+            .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
     },
