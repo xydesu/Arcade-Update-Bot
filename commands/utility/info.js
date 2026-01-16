@@ -33,7 +33,7 @@ module.exports = {
                     },
                     {
                         name: '🌐 支援連結',
-                        value: '[GitHub Repository](https://github.com/XingYanTW/Arcade-Update-Bot)\n[邀請機器人](https://discord.com/oauth2/authorize?client_id=1241736420004204564)',
+                        value: '[GitHub Repository](https://github.com/xydesu/Arcade-Update-Bot)\n[邀請機器人](https://discord.com/oauth2/authorize?client_id=1241736420004204564)',
                         inline: false
                     }
                 )
