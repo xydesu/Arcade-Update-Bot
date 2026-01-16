@@ -1,13 +1,16 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
 const { getChannelIds } = require('../../src/utils/ChannelHelper.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('servers')
-        .setDescription('顯示機器人加入的所有伺服器列表'),
+        .setDescription('顯示機器人加入的所有伺服器列表')
+        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
         // 只允許機器人擁有者使用
-        if (interaction.user.id !== '254856124820488192') { // 替換為您的 Discord 用戶 ID
+        const application = await interaction.client.application.fetch();
+        if (interaction.user.id !== application.owner.id) {
             return await interaction.reply({
                 content: '❌ 只有機器人擁有者才能使用此指令。',
                 ephemeral: true
@@ -19,17 +22,17 @@ module.exports = {
 
             const guilds = interaction.client.guilds.cache;
             const channelIds = await getChannelIds();
-            
+
             let description = '';
             const guildArray = Array.from(guilds.values());
-            
+
             for (let i = 0; i < Math.min(guildArray.length, 20); i++) {
                 const guild = guildArray[i];
                 const hasBot = channelIds.some(id => {
                     const channel = interaction.client.channels.cache.get(id);
                     return channel && channel.guild.id === guild.id;
                 });
-                
+
                 const botStatus = hasBot ? '✅' : '❌';
                 description += `${botStatus} **${guild.name}**\n`;
                 description += `　└ 👥 ${guild.memberCount} 成員 | 📅 ${guild.createdAt.toLocaleDateString('zh-TW')}\n\n`;
@@ -49,7 +52,7 @@ module.exports = {
                     inline: false
                 })
                 .setTimestamp()
-                .setFooter({ 
+                .setFooter({
                     text: '✅ = 已設定監控頻道 | ❌ = 未設定監控頻道',
                     iconURL: interaction.client.user.displayAvatarURL()
                 });

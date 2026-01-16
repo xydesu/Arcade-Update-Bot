@@ -1,16 +1,18 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
 const { getChannelIds } = require('../../src/utils/ChannelHelper.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('info')
-        .setDescription('顯示機器人的詳細資訊'),
+        .setDescription('顯示機器人的詳細資訊')
+        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
         try {
             const channelIds = await getChannelIds();
             const uptime = process.uptime();
             const uptimeString = formatUptime(uptime);
-            
+
             const embed = new EmbedBuilder()
                 .setTitle('🤖 Arcade Update Bot 資訊')
                 .setColor(0x00AE86)
@@ -38,17 +40,17 @@ module.exports = {
                     }
                 )
                 .setTimestamp()
-                .setFooter({ 
-                    text: 'Arcade Update Bot v2.0', 
-                    iconURL: interaction.client.user.displayAvatarURL() 
+                .setFooter({
+                    text: 'Arcade Update Bot v2.0',
+                    iconURL: interaction.client.user.displayAvatarURL()
                 });
 
             await interaction.reply({ embeds: [embed] });
         } catch (error) {
             console.error('Info command error:', error);
-            await interaction.reply({ 
-                content: '❌ 獲取資訊時發生錯誤，請稍後再試。', 
-                ephemeral: true 
+            await interaction.reply({
+                content: '❌ 獲取資訊時發生錯誤，請稍後再試。',
+                ephemeral: true
             });
         }
     },
@@ -58,7 +60,7 @@ function formatUptime(seconds) {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
+
     if (days > 0) {
         return `${days}天 ${hours}小時 ${minutes}分鐘`;
     } else if (hours > 0) {

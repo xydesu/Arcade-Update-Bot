@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -6,6 +6,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('logs')
         .setDescription('查看機器人日誌')
+        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel])
         .addStringOption(option =>
             option.setName('type')
                 .setDescription('選擇日誌類型')
@@ -16,10 +18,11 @@ module.exports = {
                     { name: '最近活動', value: 'recent' }
                 )),
     async execute(interaction) {
-        // 檢查權限
-        if (!interaction.member.permissions.has('Administrator')) {
+        // 檢查權限 (Bot Owner Only)
+        const application = await interaction.client.application.fetch();
+        if (interaction.user.id !== application.owner.id) {
             return await interaction.reply({
-                content: '❌ 您需要管理員權限才能查看日誌。',
+                content: '❌ 只有機器人擁有者才能查看日誌。',
                 ephemeral: true
             });
         }
@@ -29,7 +32,7 @@ module.exports = {
 
             const logType = interaction.options.getString('type') || 'recent';
             const errorLogPath = path.join(process.cwd(), 'error.log');
-            
+
             switch (logType) {
                 case 'error':
                     await handleErrorLogs(interaction, errorLogPath);
@@ -43,7 +46,7 @@ module.exports = {
                 default:
                     await interaction.editReply('❌ 無效的日誌類型。');
             }
-            
+
         } catch (error) {
             console.error('Logs command error:', error);
             await interaction.editReply({
@@ -62,20 +65,20 @@ async function handleErrorLogs(interaction, errorLogPath) {
                 .setDescription('✅ 沒有發現任何錯誤記錄！機器人運行正常。')
                 .setColor(0x00FF00)
                 .setTimestamp();
-            
+
             return await interaction.editReply({ embeds: [embed] });
         }
 
         const logContent = await fs.readFile(errorLogPath, 'utf-8');
         const lines = logContent.split('\n').filter(line => line.trim()).slice(-10);
-        
+
         if (lines.length === 0) {
             const embed = new EmbedBuilder()
                 .setTitle('📋 錯誤日誌')
                 .setDescription('✅ 錯誤日誌檔案為空，機器人運行正常。')
                 .setColor(0x00FF00)
                 .setTimestamp();
-            
+
             return await interaction.editReply({ embeds: [embed] });
         }
 
@@ -89,14 +92,14 @@ async function handleErrorLogs(interaction, errorLogPath) {
         // 如果日誌太長，提供檔案下載
         if (logContent.length > 2000) {
             const attachment = new AttachmentBuilder(errorLogPath, { name: 'error.log' });
-            await interaction.editReply({ 
-                embeds: [embed], 
+            await interaction.editReply({
+                embeds: [embed],
                 files: [attachment]
             });
         } else {
             await interaction.editReply({ embeds: [embed] });
         }
-        
+
     } catch (error) {
         console.error('Error reading error log:', error);
         await interaction.editReply('❌ 無法讀取錯誤日誌檔案。');
@@ -111,9 +114,9 @@ async function handleFullLogs(interaction, errorLogPath) {
             .setDescription('完整的錯誤日誌檔案已附加在下方。')
             .setColor(0x5865F2)
             .setTimestamp();
-            
-        await interaction.editReply({ 
-            embeds: [embed], 
+
+        await interaction.editReply({
+            embeds: [embed],
             files: [attachment]
         });
     } catch (error) {
@@ -149,7 +152,7 @@ async function handleRecentActivity(interaction) {
             }
         )
         .setTimestamp()
-        .setFooter({ 
+        .setFooter({
             text: '系統狀態正常',
             iconURL: interaction.client.user.displayAvatarURL()
         });
@@ -161,7 +164,7 @@ function formatUptime(seconds) {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
+
     if (days > 0) {
         return `${days}天 ${hours}小時 ${minutes}分鐘`;
     } else if (hours > 0) {

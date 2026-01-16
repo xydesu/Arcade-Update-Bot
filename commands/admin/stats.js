@@ -1,16 +1,19 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
 const { getChannelIds } = require('../../src/utils/ChannelHelper.js');
 const sqlite3 = require('sqlite3').verbose();
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('stats')
-        .setDescription('顯示機器人的詳細統計資料'),
+        .setDescription('顯示機器人的詳細統計資料')
+        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
-        // 檢查權限（可選：只允許特定用戶查看）
-        if (!interaction.member.permissions.has('Administrator')) {
+        // 檢查權限 (Bot Owner Only)
+        const application = await interaction.client.application.fetch();
+        if (interaction.user.id !== application.owner.id) {
             return await interaction.reply({
-                content: '❌ 您需要管理員權限才能使用此指令。',
+                content: '❌ 只有機器人擁有者才能使用此指令。',
                 ephemeral: true
             });
         }
@@ -22,10 +25,10 @@ module.exports = {
             const guilds = interaction.client.guilds.cache;
             const totalUsers = guilds.reduce((acc, guild) => acc + guild.memberCount, 0);
             const channelIds = await getChannelIds();
-            
+
             // 獲取遊戲訂閱統計
             const gameStats = await getGameSubscriptionStats();
-            
+
             const embed = new EmbedBuilder()
                 .setTitle('📊 機器人統計資料')
                 .setColor(0x9932CC)
@@ -48,9 +51,9 @@ module.exports = {
                     }
                 )
                 .setTimestamp()
-                .setFooter({ 
-                    text: 'Arcade Update Bot Statistics', 
-                    iconURL: interaction.client.user.displayAvatarURL() 
+                .setFooter({
+                    text: 'Arcade Update Bot Statistics',
+                    iconURL: interaction.client.user.displayAvatarURL()
                 });
 
             await interaction.editReply({ embeds: [embed] });
@@ -75,7 +78,7 @@ async function getGameSubscriptionStats() {
                 SUM(ongeki) as ongeki
             FROM channels
         `;
-        
+
         db.get(query, [], (err, row) => {
             db.close();
             if (err) {
@@ -91,7 +94,7 @@ function formatUptime(seconds) {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
+
     if (days > 0) {
         return `${days}天 ${hours}小時`;
     } else if (hours > 0) {
