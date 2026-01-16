@@ -1,3 +1,4 @@
+const { SlashCommandBuilder, EmbedBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
 const { ownerId } = require('../../config.json');
 
 module.exports = {
