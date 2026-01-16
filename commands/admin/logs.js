@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
+const { ownerId } = require('../../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,8 +20,7 @@ module.exports = {
                 )),
     async execute(interaction) {
         // 檢查權限 (Bot Owner Only)
-        const application = await interaction.client.application.fetch();
-        if (interaction.user.id !== application.owner.id) {
+        if (interaction.user.id !== ownerId) {
             return await interaction.reply({
                 content: '❌ 只有機器人擁有者才能查看日誌。',
                 ephemeral: true

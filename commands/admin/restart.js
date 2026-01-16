@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
+const { ownerId } = require('../../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,8 +8,7 @@ module.exports = {
         .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
         // 只允許機器人擁有者使用
-        const application = await interaction.client.application.fetch();
-        if (interaction.user.id !== application.owner.id) {
+        if (interaction.user.id !== ownerId) {
             return await interaction.reply({
                 content: '❌ 只有機器人擁有者才能使用此指令。',
                 ephemeral: true
