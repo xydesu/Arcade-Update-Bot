@@ -6,8 +6,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('stats')
         .setDescription('顯示機器人的詳細統計資料')
-        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
-        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
         // 檢查權限 (Bot Owner Only)
         const application = await interaction.client.application.fetch();

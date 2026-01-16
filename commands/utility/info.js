@@ -5,8 +5,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('info')
         .setDescription('顯示機器人的詳細資訊')
-        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
-        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
         try {
             const channelIds = await getChannelIds();

@@ -6,8 +6,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('logs')
         .setDescription('查看機器人日誌')
-        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
-        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel])
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel])
         .addStringOption(option =>
             option.setName('type')
                 .setDescription('選擇日誌類型')

@@ -26,8 +26,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('lastupdates')
         .setDescription('查看各遊戲的最後更新通知')
-        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
-        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel])
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel])
         .addStringOption(option =>
             option.setName('game')
                 .setDescription('選擇特定遊戲查看詳細資訊')

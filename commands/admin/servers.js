@@ -5,8 +5,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('servers')
         .setDescription('顯示機器人加入的所有伺服器列表')
-        .setIntegrationTypes([ApplicationIntegrationType.UserInstall])
-        .setContexts([InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
+        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
+        .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
         // 只允許機器人擁有者使用
         const application = await interaction.client.application.fetch();
