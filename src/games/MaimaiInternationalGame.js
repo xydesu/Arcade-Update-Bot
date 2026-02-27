@@ -1,55 +1,65 @@
-const { GameEngine } = require('../core/GameEngine.js');
-const dotenv = require('dotenv');
+const {
+    GameEngine
+} = require('../core/GameEngine.js');
 const OpenAI = require('openai');
+const dotenv = require('dotenv');
+const appConfig = require('../../config/appConfig.js');
 
 dotenv.config();
 
-// OpenAI 配置
 const token = process.env.GITHUB_TOKEN;
-const endpoint = "https://models.github.ai/inference";
-const model = "openai/gpt-4.1";
 
+// 從 appConfig 讀取 OpenAI 配置
 const clientAI = new OpenAI({
-  baseURL: endpoint,
-  apiKey: token,
+    baseURL: appConfig.openai.endpoint,
+    apiKey: token,
 });
 
-// MaimaiIntl 特殊配置，繼承遊戲引擎
+// MaimaiIntl 繼承遊戲引擎，覆寫特殊行為
 class MaimaiIntlGame extends GameEngine {
     constructor(config) {
         super(config);
     }
 
-    // 重寫圖片URL獲取方法
+    // 重寫圖片 URL 取得方法（修復：不修改原陣列）
     getImageUrl(item) {
-        if (item.date[1] < 10) item.date[1] = '0' + item.date[1];
-        if (item.date[2] < 10) item.date[2] = '0' + item.date[2];
-        const date = item.date.join('-');
+        const year = item.date[0];
+        const month = String(item.date[1]).padStart(2, '0');
+        const day = String(item.date[2]).padStart(2, '0');
+        const date = `${year}-${month}-${day}`;
         return `https://maimai.sega.com/assets/img/download/pop/download/${date}/pop.jpg`;
     }
 
-    // 重寫Discord發送方法以包含AI生成的公告
+    // 重寫 Discord 發送方法以包含 AI 生成的公告
     async postImageToDiscord(imageUrl, item, channelId, client) {
         try {
             console.log(`[INFO] Posting ${this.gameName} message to channel ${channelId}`);
-            
-            const date = this.getImageUrl(item).match(/(\d{4}-\d{2}-\d{2})/)?.[1] || 'Unknown';
-            
+
+            const dateMatch = this.getImageUrl(item).match(/(\d{4}-\d{2}-\d{2})/);
+            const date = (dateMatch && dateMatch[1]) || 'Unknown';
+
             // 呼叫 AI 生成公告
             const announcement = await this.generateAnnouncement(imageUrl, date);
 
             const embedMessage = {
-                content: announcement, // AI 公告放到訊息正文
-                embeds: [
-                    {
-                        title: item.title,
-                        color: this.color,
-                        image: { url: imageUrl },
-                        author: { name: this.gameNameJP, icon_url: this.avatarUrl },
-                        footer: { text: `Generated at ${new Date().toISOString().split('T')[0]}` },
-                        thumbnail: { url: this.thumbnailUrl },
+                content: announcement,
+                embeds: [{
+                    title: item.title,
+                    color: this.color,
+                    image: {
+                        url: imageUrl
                     },
-                ],
+                    author: {
+                        name: this.gameNameJP,
+                        icon_url: this.avatarUrl
+                    },
+                    footer: {
+                        text: `Generated at ${new Date().toISOString().split('T')[0]}`
+                    },
+                    thumbnail: {
+                        url: this.thumbnailUrl
+                    },
+                }, ],
                 username: this.gameNameJP,
                 avatar_url: this.avatarUrl,
             };
@@ -71,9 +81,8 @@ class MaimaiIntlGame extends GameEngine {
     async generateAnnouncement(imageUrl, date) {
         try {
             const response = await clientAI.chat.completions.create({
-                model: model,
-                messages: [
-                    {
+                model: appConfig.openai.model,
+                messages: [{
                         role: "system",
                         content: `你是一位音樂節奏遊戲的官方公告編輯助理。  
 任務：
@@ -112,15 +121,21 @@ class MaimaiIntlGame extends GameEngine {
                     },
                     {
                         role: "user",
-                        content: [
-                            { type: "text", text: `更新時間： ${date}
-                請根據這張活動圖片內容生成公告：` },
-                            { type: "image_url", image_url: { url: imageUrl } }
+                        content: [{
+                                type: "text",
+                                text: `更新時間： ${date}\n請根據這張活動圖片內容生成公告：`
+                            },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: imageUrl
+                                }
+                            }
                         ]
                     }
                 ],
-                temperature: 0.8,
-                top_p: 1.0,
+                temperature: appConfig.openai.temperature,
+                top_p: appConfig.openai.top_p,
             });
 
             return response.choices[0].message.content || "（AI 未能生成公告）";
@@ -131,26 +146,13 @@ class MaimaiIntlGame extends GameEngine {
     }
 }
 
-// Maimai International 配置
-const maiintlConfig = {
-    gameKey: 'maiintl',
-    gameName: 'Maimai International',
-    gameNameJP: 'maimai でらっくす',
-    apiUrl: 'https://maimai.sega.com/assets/data/index.json',
-    avatarUrl: 'https://www.google.com/s2/favicons?sz=64&domain=maimai.sega.com',
-    thumbnailUrl: 'https://maimai.sega.com/assets/img/prism/common/logo.png',
-    color: 4571344,
-    dbField: 'Maimaiintl',
-    hasPermalink: false
-};
-
-// 創建 Maimai International 實例
-const maiintlGame = new MaimaiIntlGame(maiintlConfig);
+// 從 appConfig 讀取 Maimai International 配置
+const maiintlGame = new MaimaiIntlGame(appConfig.games.maiintl);
 
 async function maiintl(client) {
     await maiintlGame.run(client);
 }
 
 module.exports = {
-    maiintl: maiintl
+    maiintl
 };

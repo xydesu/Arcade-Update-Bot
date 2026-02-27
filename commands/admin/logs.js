@@ -1,7 +1,18 @@
-const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
+const {
+    SlashCommandBuilder,
+    EmbedBuilder,
+    AttachmentBuilder,
+    ApplicationIntegrationType,
+    InteractionContextType
+} = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
-const { ownerId } = require('../../config.json');
+const {
+    ownerId
+} = require('../../config.json');
+const {
+    formatUptime
+} = require('../../src/utils/Formatter.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,13 +22,18 @@ module.exports = {
         .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel])
         .addStringOption(option =>
             option.setName('type')
-                .setDescription('選擇日誌類型')
-                .setRequired(false)
-                .addChoices(
-                    { name: '錯誤日誌', value: 'error' },
-                    { name: '完整日誌', value: 'full' },
-                    { name: '最近活動', value: 'recent' }
-                )),
+            .setDescription('選擇日誌類型')
+            .setRequired(false)
+            .addChoices({
+                name: '錯誤日誌',
+                value: 'error'
+            }, {
+                name: '完整日誌',
+                value: 'full'
+            }, {
+                name: '最近活動',
+                value: 'recent'
+            })),
     async execute(interaction) {
         // 檢查權限 (Bot Owner Only)
         if (interaction.user.id !== ownerId) {
@@ -28,7 +44,9 @@ module.exports = {
         }
 
         try {
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({
+                ephemeral: true
+            });
 
             const logType = interaction.options.getString('type') || 'recent';
             const errorLogPath = path.join(process.cwd(), 'error.log');
@@ -66,7 +84,9 @@ async function handleErrorLogs(interaction, errorLogPath) {
                 .setColor(0x00FF00)
                 .setTimestamp();
 
-            return await interaction.editReply({ embeds: [embed] });
+            return await interaction.editReply({
+                embeds: [embed]
+            });
         }
 
         const logContent = await fs.readFile(errorLogPath, 'utf-8');
@@ -79,7 +99,9 @@ async function handleErrorLogs(interaction, errorLogPath) {
                 .setColor(0x00FF00)
                 .setTimestamp();
 
-            return await interaction.editReply({ embeds: [embed] });
+            return await interaction.editReply({
+                embeds: [embed]
+            });
         }
 
         const embed = new EmbedBuilder()
@@ -87,17 +109,23 @@ async function handleErrorLogs(interaction, errorLogPath) {
             .setDescription(`\`\`\`\n${lines.join('\n').slice(-1800)}\n\`\`\``)
             .setColor(0xFF0000)
             .setTimestamp()
-            .setFooter({ text: `顯示最近 ${lines.length} 條錯誤記錄` });
+            .setFooter({
+                text: `顯示最近 ${lines.length} 條錯誤記錄`
+            });
 
         // 如果日誌太長，提供檔案下載
         if (logContent.length > 2000) {
-            const attachment = new AttachmentBuilder(errorLogPath, { name: 'error.log' });
+            const attachment = new AttachmentBuilder(errorLogPath, {
+                name: 'error.log'
+            });
             await interaction.editReply({
                 embeds: [embed],
                 files: [attachment]
             });
         } else {
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({
+                embeds: [embed]
+            });
         }
 
     } catch (error) {
@@ -108,7 +136,9 @@ async function handleErrorLogs(interaction, errorLogPath) {
 
 async function handleFullLogs(interaction, errorLogPath) {
     try {
-        const attachment = new AttachmentBuilder(errorLogPath, { name: 'error.log' });
+        const attachment = new AttachmentBuilder(errorLogPath, {
+            name: 'error.log'
+        });
         const embed = new EmbedBuilder()
             .setTitle('📁 完整日誌檔案')
             .setDescription('完整的錯誤日誌檔案已附加在下方。')
@@ -129,47 +159,30 @@ async function handleRecentActivity(interaction) {
     const embed = new EmbedBuilder()
         .setTitle('📊 機器人最近活動')
         .setColor(0x9932CC)
-        .addFields(
-            {
-                name: '⏰ 運行時間',
-                value: formatUptime(process.uptime()),
-                inline: true
-            },
-            {
-                name: '💾 記憶體使用',
-                value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
-                inline: true
-            },
-            {
-                name: '🏠 連接的伺服器',
-                value: `${interaction.client.guilds.cache.size} 個`,
-                inline: true
-            },
-            {
-                name: '⚡ 最後檢查時間',
-                value: `<t:${Math.floor(Date.now() / 1000)}:R>`,
-                inline: false
-            }
-        )
+        .addFields({
+            name: '⏰ 運行時間',
+            value: formatUptime(process.uptime()),
+            inline: true
+        }, {
+            name: '💾 記憶體使用',
+            value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+            inline: true
+        }, {
+            name: '🏠 連接的伺服器',
+            value: `${interaction.client.guilds.cache.size} 個`,
+            inline: true
+        }, {
+            name: '⚡ 最後檢查時間',
+            value: `<t:${Math.floor(Date.now() / 1000)}:R>`,
+            inline: false
+        })
         .setTimestamp()
         .setFooter({
             text: '系統狀態正常',
             iconURL: interaction.client.user.displayAvatarURL()
         });
 
-    await interaction.editReply({ embeds: [embed] });
-}
-
-function formatUptime(seconds) {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) {
-        return `${days}天 ${hours}小時 ${minutes}分鐘`;
-    } else if (hours > 0) {
-        return `${hours}小時 ${minutes}分鐘`;
-    } else {
-        return `${minutes}分鐘`;
-    }
+    await interaction.editReply({
+        embeds: [embed]
+    });
 }

@@ -1,12 +1,23 @@
 // 遊戲引擎基礎類，用於減少重複代碼
-const { getChannelIds } = require('../utils/ChannelHelper.js');
-const { download } = require('../services/DataFetcher.js');
-const { compareJson } = require('../utils/JsonComparator.js');
-const { getChannelSettings } = require('../models/DatabaseManager.js');
+const {
+    getChannelIds
+} = require('../utils/ChannelHelper.js');
+const {
+    download
+} = require('../services/DataFetcher.js');
+const {
+    compareJson
+} = require('../utils/JsonComparator.js');
+const {
+    getChannelSettings
+} = require('../models/DatabaseManager.js');
 const moment = require('moment');
 const axios = require('axios');
 const fs = require('fs');
-const { ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+    ButtonBuilder,
+    ButtonStyle
+} = require('discord.js');
 
 class GameEngine {
     constructor(config) {
@@ -27,13 +38,13 @@ class GameEngine {
             console.log(`[INFO] Starting ${this.gameName} check...`);
             await download(this.gameKey, this.apiUrl);
             await compareJson(this.gameKey);
-            
+
             const channelIds = await getChannelIds();
             if (channelIds.length === 0) {
                 console.error(`[ERROR] No channels found in the database for ${this.gameName}.`);
                 return;
             }
-            
+
             await this.loadImages(channelIds, client);
             console.log(`[INFO] ${this.gameName} check completed.`);
         } catch (error) {
@@ -52,7 +63,9 @@ class GameEngine {
 
             const data = JSON.parse(fs.readFileSync(newObjectsPath));
             const imageFolder = 'images';
-            fs.mkdirSync(imageFolder, { recursive: true });
+            fs.mkdirSync(imageFolder, {
+                recursive: true
+            });
 
             for (const item of data) {
                 const imageUrl = this.getImageUrl(item);
@@ -62,7 +75,9 @@ class GameEngine {
 
                 try {
                     // 驗證圖片URL是否有效
-                    await axios.get(imageUrl, { responseType: 'arraybuffer' });
+                    await axios.get(imageUrl, {
+                        responseType: 'arraybuffer'
+                    });
                 } catch (imageError) {
                     console.warn(`[WARN] Failed to fetch image for ${this.gameName}:`, imageError.message);
                     continue;
@@ -94,7 +109,7 @@ class GameEngine {
     // 自定義字段顯示，子類可以覆蓋此方法
     getCustomFields(item) {
         const fields = [];
-        
+
         // 通用字段處理
         if (item.artist) {
             fields.push({
@@ -145,7 +160,7 @@ class GameEngine {
     recordLastUpdate(item) {
         const lastUpdatePath = './json/lastUpdates.json';
         let lastUpdates = {};
-        
+
         // 讀取現有的最後更新記錄
         if (fs.existsSync(lastUpdatePath)) {
             try {
@@ -154,7 +169,7 @@ class GameEngine {
                 console.warn('[WARN] Failed to read lastUpdates.json:', error.message);
             }
         }
-        
+
         // 更新記錄
         lastUpdates[this.gameKey] = {
             gameName: this.gameName,
@@ -168,7 +183,7 @@ class GameEngine {
             color: this.color,
             avatarUrl: this.avatarUrl
         };
-        
+
         // 儲存更新記錄
         try {
             fs.writeFileSync(lastUpdatePath, JSON.stringify(lastUpdates, null, 2));
@@ -183,7 +198,7 @@ class GameEngine {
         if (!fs.existsSync(lastUpdatePath)) {
             return {};
         }
-        
+
         try {
             return JSON.parse(fs.readFileSync(lastUpdatePath, 'utf8'));
         } catch (error) {
@@ -195,21 +210,23 @@ class GameEngine {
     async postImageToDiscord(imageUrl, item, channelId, client) {
         try {
             console.log(`[INFO] Posting ${this.gameName} message to channel ${channelId}`);
-            
+
             // 記錄最後更新資訊
             this.recordLastUpdate(item);
-            
+
             // 創建更美觀的嵌入消息
             const embed = {
                 title: `🎵 ${item.title}`,
                 color: this.color,
-                image: { url: imageUrl },
-                author: { 
-                    name: `${this.gameNameJP} 新增內容`, 
-                    icon_url: this.avatarUrl 
+                image: {
+                    url: imageUrl
+                },
+                author: {
+                    name: `${this.gameNameJP} 新增內容`,
+                    icon_url: this.avatarUrl
                 },
                 fields: this.getCustomFields(item), // 使用自定義字段方法
-                footer: { 
+                footer: {
                     text: `🕐 ${moment().format('YYYY-MM-DD HH:mm')}`,
                     icon_url: this.thumbnailUrl
                 },
@@ -234,9 +251,9 @@ class GameEngine {
                     .setURL(item.permalink)
                     .setStyle(ButtonStyle.Link);
 
-                embedMessage.components = [{ 
-                    type: 1, 
-                    components: [linkButton] 
+                embedMessage.components = [{
+                    type: 1,
+                    components: [linkButton]
                 }];
             }
 
@@ -256,4 +273,6 @@ class GameEngine {
     }
 }
 
-module.exports = { GameEngine };
+module.exports = {
+    GameEngine
+};

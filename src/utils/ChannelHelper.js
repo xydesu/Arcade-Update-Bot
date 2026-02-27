@@ -1,23 +1,13 @@
-const sqlite3 = require('sqlite3');
+const {
+    allAsync
+} = require('../models/DatabaseManager.js');
 
-// Fetch channel IDs from the database
+// 從資料庫取得所有頻道 ID
 async function getChannelIds() {
-    return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database('database.db');
-        const query = `SELECT ChannelId FROM channels`;
-
-        db.all(query, [], (err, rows) => {
-            if (err) {
-                reject(err);
-            } else {
-                const channelIds = rows.map(row => BigInt(row.ChannelId).toString());
-                resolve(channelIds);
-            }
-            db.close();
-        });
-    });
+    const rows = await allAsync('SELECT ChannelId FROM channels');
+    return rows.map(row => BigInt(row.ChannelId).toString());
 }
 
 module.exports = {
-    getChannelIds: getChannelIds
+    getChannelIds
 };

@@ -1,7 +1,21 @@
-const { SlashCommandBuilder, EmbedBuilder, ApplicationIntegrationType, InteractionContextType } = require('discord.js');
-const { getChannelIds } = require('../../src/utils/ChannelHelper.js');
-const sqlite3 = require('sqlite3').verbose();
-const { ownerId } = require('../../config.json');
+const {
+    SlashCommandBuilder,
+    EmbedBuilder,
+    ApplicationIntegrationType,
+    InteractionContextType
+} = require('discord.js');
+const {
+    getChannelIds
+} = require('../../src/utils/ChannelHelper.js');
+const {
+    getAsync
+} = require('../../src/models/DatabaseManager.js');
+const {
+    formatUptime
+} = require('../../src/utils/Formatter.js');
+const {
+    ownerId
+} = require('../../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -10,7 +24,6 @@ module.exports = {
         .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
         .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
-        // 檢查權限 (Bot Owner Only)
         if (interaction.user.id !== ownerId) {
             return await interaction.reply({
                 content: '❌ 只有機器人擁有者才能使用此指令。',
@@ -21,42 +34,43 @@ module.exports = {
         try {
             await interaction.deferReply();
 
-            // 獲取基本統計
             const guilds = interaction.client.guilds.cache;
             const totalUsers = guilds.reduce((acc, guild) => acc + guild.memberCount, 0);
             const channelIds = await getChannelIds();
 
-            // 獲取遊戲訂閱統計
             const gameStats = await getGameSubscriptionStats();
+
+            // 記憶體使用量
+            const memUsage = process.memoryUsage();
+            const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+            const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
 
             const embed = new EmbedBuilder()
                 .setTitle('📊 機器人統計資料')
                 .setColor(0x9932CC)
                 .setThumbnail(interaction.client.user.displayAvatarURL())
-                .addFields(
-                    {
-                        name: '🏠 伺服器統計',
-                        value: `**伺服器總數:** ${guilds.size}\n**用戶總數:** ${totalUsers.toLocaleString()}\n**監控頻道:** ${channelIds.length}`,
-                        inline: true
-                    },
-                    {
-                        name: '🎮 遊戲訂閱統計',
-                        value: `🎵 **Maimai:** ${gameStats.Maimai}\n🌍 **Maimai Intl:** ${gameStats.Maimaiintl}\n🎹 **Chunithm:** ${gameStats.Chunithm}\n🌏 **Chunithm Intl:** ${gameStats.Chunithmintl}\n🎼 **Ongeki:** ${gameStats.ongeki}`,
-                        inline: true
-                    },
-                    {
-                        name: '⚡ 系統資源',
-                        value: `**CPU 使用率:** ${(process.cpuUsage().user / 1000000).toFixed(2)}%\n**記憶體:** ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB / ${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB\n**運行時間:** ${formatUptime(process.uptime())}`,
-                        inline: false
-                    }
-                )
+                .addFields({
+                    name: '🏠 伺服器統計',
+                    value: `**伺服器總數:** ${guilds.size}\n**用戶總數:** ${totalUsers.toLocaleString()}\n**監控頻道:** ${channelIds.length}`,
+                    inline: true
+                }, {
+                    name: '🎮 遊戲訂閱統計',
+                    value: `🎵 **Maimai:** ${gameStats.Maimai}\n🌍 **Maimai Intl:** ${gameStats.Maimaiintl}\n🎹 **Chunithm:** ${gameStats.Chunithm}\n🌏 **Chunithm Intl:** ${gameStats.Chunithmintl}\n🎼 **Ongeki:** ${gameStats.ongeki}`,
+                    inline: true
+                }, {
+                    name: '⚡ 系統資源',
+                    value: `**記憶體:** ${heapUsedMB}MB / ${heapTotalMB}MB\n**運行時間:** ${formatUptime(process.uptime())}`,
+                    inline: false
+                })
                 .setTimestamp()
                 .setFooter({
                     text: 'Arcade Update Bot Statistics',
                     iconURL: interaction.client.user.displayAvatarURL()
                 });
 
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({
+                embeds: [embed]
+            });
         } catch (error) {
             console.error('Stats command error:', error);
             await interaction.editReply({
@@ -67,39 +81,21 @@ module.exports = {
 };
 
 async function getGameSubscriptionStats() {
-    return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database('database.db');
-        const query = `
-            SELECT 
-                SUM(Maimai) as Maimai,
-                SUM(Maimaiintl) as Maimaiintl,
-                SUM(Chunithm) as Chunithm,
-                SUM(Chunithmintl) as Chunithmintl,
-                SUM(ongeki) as ongeki
-            FROM channels
-        `;
-
-        db.get(query, [], (err, row) => {
-            db.close();
-            if (err) {
-                reject(err);
-            } else {
-                resolve(row || { Maimai: 0, Maimaiintl: 0, Chunithm: 0, Chunithmintl: 0, ongeki: 0 });
-            }
-        });
-    });
-}
-
-function formatUptime(seconds) {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) {
-        return `${days}天 ${hours}小時`;
-    } else if (hours > 0) {
-        return `${hours}小時 ${minutes}分鐘`;
-    } else {
-        return `${minutes}分鐘`;
-    }
+    const query = `
+        SELECT 
+            SUM(Maimai) as Maimai,
+            SUM(Maimaiintl) as Maimaiintl,
+            SUM(Chunithm) as Chunithm,
+            SUM(Chunithmintl) as Chunithmintl,
+            SUM(ongeki) as ongeki
+        FROM channels
+    `;
+    const row = await getAsync(query);
+    return row || {
+        Maimai: 0,
+        Maimaiintl: 0,
+        Chunithm: 0,
+        Chunithmintl: 0,
+        ongeki: 0
+    };
 }

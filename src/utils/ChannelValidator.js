@@ -1,10 +1,14 @@
-const {getChannelIds} = require("./ChannelHelper");
-const sqlite3 = require('sqlite3').verbose();
-const fs = require('fs'); // 添加缺失的 fs 引入
+const {
+    getChannelIds
+} = require('./ChannelHelper');
+const {
+    runAsync
+} = require('../models/DatabaseManager.js');
+const fs = require('fs');
 
 /**
- * Check the channels that the bot is in and log them to the console.
- * @param {Client} client The Discord client object.
+ * 檢查頻道是否仍然有效，刪除無效頻道
+ * @param {Client} client Discord 客戶端
  */
 async function checkchannels(client) {
     try {
@@ -12,8 +16,7 @@ async function checkchannels(client) {
         const invalidChannels = [];
 
         channelIds.forEach(channelId => {
-            // 檢查頻道是否仍然存在於任何伺服器中
-            const channelExists = client.guilds.cache.some(guild => 
+            const channelExists = client.guilds.cache.some(guild =>
                 guild.channels.cache.has(channelId)
             );
 
@@ -34,29 +37,21 @@ async function checkchannels(client) {
 }
 
 /**
- * Delete invalid channels from database
- * @param {Array<string>} channelIds Array of channel IDs to delete
+ * 從資料庫刪除無效頻道
+ * @param {Array<string>} channelIds 要刪除的頻道 ID 陣列
  */
 async function deleteInvalidChannels(channelIds) {
-    return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database('database.db');
+    try {
         const placeholders = channelIds.map(() => '?').join(',');
         const deleteQuery = `DELETE FROM channels WHERE ChannelId IN (${placeholders});`;
-
-        db.run(deleteQuery, channelIds, function (err) {
-            db.close(); // 確保關閉連接
-            if (err) {
-                fs.appendFileSync('error.log', `[${new Date().toISOString()}] Database deletion error: ${err.message}\n`);
-                console.error('[ERROR] Database deletion error:', err.message);
-                reject(err);
-            } else {
-                console.log(`[INFO] Successfully deleted ${this.changes} invalid channels from database.`);
-                resolve();
-            }
-        });
-    });
+        const result = await runAsync(deleteQuery, channelIds);
+        console.log(`[INFO] Successfully deleted ${result.changes} invalid channels from database.`);
+    } catch (err) {
+        fs.appendFileSync('error.log', `[${new Date().toISOString()}] Database deletion error: ${err.message}\n`);
+        console.error('[ERROR] Database deletion error:', err.message);
+    }
 }
 
 module.exports = {
-    checkchannels: checkchannels
+    checkchannels
 };

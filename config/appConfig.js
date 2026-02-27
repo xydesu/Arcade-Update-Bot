@@ -72,7 +72,7 @@ module.exports = {
             gameNameJP: 'オンゲキ',
             apiUrl: 'https://info-ongeki.sega.jp/wp-json/thistheme/v1/articlesRest',
             avatarUrl: 'https://www.google.com/s2/favicons?sz=64&domain=ongeki.sega.jp',
-            thumbnailUrl: 'https://chunithm.sega.jp/$site/components/chuniNavi/logo.png',
+            thumbnailUrl: 'https://www.google.com/s2/favicons?sz=64&domain=ongeki.sega.jp',
             color: 0xF087EE,
             dbField: 'ongeki',
             hasPermalink: true
