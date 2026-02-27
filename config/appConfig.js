@@ -93,8 +93,8 @@ module.exports = {
     // OpenAI 配置
     openai: {
         endpoint: "https://models.github.ai/inference",
-        model: "openai/gpt-4.1",
-        temperature: 0.8,
+        model: "openai/gpt-4o",
+        temperature: 0.3,
         top_p: 1.0
     }
 };
