@@ -21,13 +21,28 @@ class MaimaiIntlGame extends GameEngine {
         super(config);
     }
 
-    // 重寫圖片 URL 取得方法（修復：不修改原陣列）
+    // 重寫圖片 URL 取得方法
     getImageUrl(item) {
         const year = item.date[0];
         const month = String(item.date[1]).padStart(2, '0');
         const day = String(item.date[2]).padStart(2, '0');
-        const date = `${year}-${month}-${day}`;
-        return `https://maimai.sega.com/assets/img/download/pop/download/${date}/pop.jpg`;
+        
+        // 基本的日期資料夾名稱 (例如 2026-04-24)
+        let dateFolder = `${year}-${month}-${day}`;
+        
+        // 擷取 date 陣列的第四個元素（如果有的話，例如 5）
+        const imageIndex = item.date[3];
+        
+        // 如果有索引值，就加在日期資料夾名稱的後面 (變成 2026-04-24-5)
+        if (imageIndex) {
+            dateFolder += `-${imageIndex}`;
+        }
+
+        // 取得預設的檔名 (通常是 pop.jpg)
+        const fileName = item.thumb || 'pop.jpg';
+
+        // 組合出最終正確的網址
+        return `https://maimai.sega.com/assets/img/download/pop/download/${dateFolder}/${fileName}`;
     }
 
     // 重寫 Discord 發送方法以包含 AI 生成的公告
