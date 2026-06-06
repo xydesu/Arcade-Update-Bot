@@ -1,6 +1,5 @@
 const fs = require('fs');
 const Youtube = require('youtube-search-api');
-const ytdl = require('ytdl-core');
 
 // 配置常量
 const PRESENCE_CONFIG = {
@@ -14,6 +13,21 @@ const PRESENCE_CONFIG = {
 
 let currentUpdateTimer = null;
 let songChangeTimer = null;
+
+// 將 YouTube 影片長度字串（例如 "2:37" 或 "1:02:37"）轉換為總秒數
+function parseDurationToSeconds(durationStr) {
+    if (!durationStr || durationStr === 'Unknown') return 0;
+    const parts = durationStr.split(':').map(p => parseInt(p, 10));
+    if (parts.some(isNaN)) return 0;
+    
+    let seconds = 0;
+    if (parts.length === 2) {
+        seconds = parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+        seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    return seconds;
+}
 
 async function richpresence(client) {
     try {
@@ -51,43 +65,17 @@ async function richpresence(client) {
             const results = await Youtube.GetListByKeyword(searchQuery, false, 1);
             
             if (results?.items?.length > 0) {
-                const videoId = results.items[0].id;
-                if (videoId) {
-                    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                    try {
-                        const info = await ytdl.getInfo(videoUrl);
-                        const seconds = parseInt(info.videoDetails.lengthSeconds, 10);
-                        if (!isNaN(seconds) && seconds > 0) {
-                            totalSeconds = seconds;
-                            const min = Math.floor(seconds / 60);
-                            const sec = seconds % 60;
-                            videoLength = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-                        }
-                    } catch (err) {
-                        console.warn('[WARN] Failed to get video info from ytdl-core:', err.message);
-                        // 嘗試從搜索結果獲取長度
-                        if (results.items[0].length) {
-                            videoLength = typeof results.items[0].length === 'string' 
-                                ? results.items[0].length 
-                                : results.items[0].length.simpleText || 'Unknown';
-                        }
-                    }
+                const item = results.items[0];
+                if (item.length) {
+                    videoLength = typeof item.length === 'string' 
+                        ? item.length 
+                        : item.length.simpleText || 'Unknown';
+                    
+                    totalSeconds = parseDurationToSeconds(videoLength);
                 }
             }
         } catch (err) {
             console.warn('[WARN] Youtube search failed:', err.message);
-        }
-
-        // 解析視頻長度
-        if (videoLength && videoLength !== 'Unknown' && videoLength.includes(':')) {
-            const parts = videoLength.split(':');
-            if (parts.length === 2) {
-                const min = parseInt(parts[0], 10);
-                const sec = parseInt(parts[1], 10);
-                if (!isNaN(min) && !isNaN(sec)) {
-                    totalSeconds = min * 60 + sec;
-                }
-            }
         }
 
         // 設置初始狀態

@@ -90,11 +90,11 @@ module.exports = {
         }
     },
 
-    // OpenAI 配置
+    // NVIDIA API 配置
     openai: {
-        endpoint: "https://models.github.ai/inference",
-        model: "openai/gpt-4o",
-        temperature: 0.3,
-        top_p: 1.0
+        endpoint: "https://integrate.api.nvidia.com/v1",
+        model: "moonshotai/kimi-k2.6",
+        temperature: 1.00,
+        top_p: 1.00
     }
 };
