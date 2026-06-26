@@ -1,8 +1,15 @@
 // 單例資料庫連接管理器
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', '..', 'database.db');
+// 確保 data 目錄存在
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+const DB_PATH = path.join(DATA_DIR, 'database.db');
 
 let db = null;
 
