@@ -9,7 +9,6 @@ error.log
 
 # 依賴項
 node_modules/
-package-lock.json
 
 # 執行時生成的檔案和資料夾
 images/
