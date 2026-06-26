@@ -8,9 +8,6 @@ const {
 const fs = require('fs').promises;
 const path = require('path');
 const {
-    ownerId
-} = require('../../config.json');
-const {
     formatUptime
 } = require('../../src/utils/Formatter.js');
 
@@ -36,7 +33,7 @@ module.exports = {
             })),
     async execute(interaction) {
         // 檢查權限 (Bot Owner Only)
-        if (interaction.user.id !== ownerId) {
+        if (interaction.user.id !== process.env.OWNER_ID) {
             return await interaction.reply({
                 content: '❌ 只有機器人擁有者才能查看日誌。',
                 ephemeral: true

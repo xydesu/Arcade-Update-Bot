@@ -13,9 +13,6 @@ const {
 const {
     formatUptime
 } = require('../../src/utils/Formatter.js');
-const {
-    ownerId
-} = require('../../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,7 +21,7 @@ module.exports = {
         .setIntegrationTypes([ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall])
         .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel]),
     async execute(interaction) {
-        if (interaction.user.id !== ownerId) {
+        if (interaction.user.id !== process.env.OWNER_ID) {
             return await interaction.reply({
                 content: '❌ 只有機器人擁有者才能使用此指令。',
                 ephemeral: true
